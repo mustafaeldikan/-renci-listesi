@@ -227,5 +227,4 @@ function guncelle($sid, $name, $surname, $dogumYeri, $dogumTarihi)
     $query = "UPDATE studentdb SET fname='$name', lname='$surname', birthPlace='$dogumYeri', birthDate='$dogumTarihi' WHERE sid='$sid'";
     $retval = mysqli_query($conn, $query) or die("Update operation failed");
 }
-
 ?>
