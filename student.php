@@ -101,7 +101,7 @@ function listele($page, $sort, $order, $search)
     $query = 'SELECT * from studentdb ';
 
     if ($search) {
-        echo "<p>Sen bu kelimeyi arıyorsun: <strong>$search</strong></p>";
+        echo "<p>Aradığınız kelimeyi : <strong>$search</strong></p>";
         $query = $query . "WHERE fname LIKE '%" . $search . "%' OR lname LIKE '%" . $search . "%' OR birthPlace LIKE '%" . $search . "%' ";
         $urlQuery = $urlQuery . "&search=$search";
     }
@@ -120,7 +120,7 @@ function listele($page, $sort, $order, $search)
     $kayitKumesi = mysqli_query($conn, $query) or die(mysqli_error($conn));
 
     echo "<style>td {border:1px solid red}</style>
-    <form action='student.php' method='GET'>
+    <form method='GET'>
         <input type='text' name='search'>
         <button>Bul</button>
         <button>Temizle</button>
@@ -227,4 +227,7 @@ function guncelle($sid, $name, $surname, $dogumYeri, $dogumTarihi)
     $query = "UPDATE studentdb SET fname='$name', lname='$surname', birthPlace='$dogumYeri', birthDate='$dogumTarihi' WHERE sid='$sid'";
     $retval = mysqli_query($conn, $query) or die("Update operation failed");
 }
+
+
+
 ?>
