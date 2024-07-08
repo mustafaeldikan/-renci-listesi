@@ -1,4 +1,5 @@
 <?php
+echo $_SERVER['QUERY_STRING']. "<br>";
 $conn = connect();
 $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 $sort = isset($_GET['sort']) ? $_GET['sort'] : 'sid';
@@ -9,7 +10,7 @@ switch (isset($_GET['is']) ? $_GET['is'] : '') {
     case 'sil':
         echo pageHeader("Student List");
         sil($_GET['sid']);
-        listele($page, $sort, $order, $search);
+        listele($page, $sort, $order);
         break;
     case 'eklemeFormu':
         eklemeFormu();
@@ -17,7 +18,7 @@ switch (isset($_GET['is']) ? $_GET['is'] : '') {
     case 'ekle':
         echo pageHeader("Student List");
         ekle($_GET['name'], $_GET['surname'], $_GET['dogumYeri'], $_GET['dogumTarihi']);
-        listele($page, $sort, $order, $search);
+        listele($page, $sort, $order);
         break;
     case 'degistirmeFormu':
         echo pageHeader("Update Information");
@@ -26,11 +27,15 @@ switch (isset($_GET['is']) ? $_GET['is'] : '') {
     case 'guncelle':
         echo pageHeader("Student List");
         guncelle($_GET['sid'], $_GET['name'], $_GET['surname'], $_GET['dogumYeri'], $_GET['dogumTarihi']);
-        listele($page, $sort, $order, $search);
+        listele($page, $sort, $order);
         break;
+    case 'ara':
+            echo pageHeader("Student List");
+            listele($page, $sort, $order);
+            break;
     default:
         echo pageHeader("Student List");
-        listele($page, $sort, $order, $search);
+        listele($page, $sort, $order);
 }
 
 function eklemeFormu()
@@ -90,49 +95,56 @@ function buildUrl($extraQueries = []){
     foreach ($extraQueries as $key => $value) {
         $params[$key] = $value;
     }
+
     return http_build_query($params);
 }
 
-function listele($page, $sort, $order, $search)
+function listele($page, $sort, $order)
 {
     $buildUrl = 'buildUrl';
     global $conn;
-    $limit = 5;
-    $totalRecords = mysqli_query($conn, "SELECT COUNT(*) AS total FROM studentdb");
-    $totalRecords = mysqli_fetch_assoc($totalRecords)['total'];
-    $totalPages = ceil($totalRecords / $limit);
-    $prevPage = max($page - 1, 1);
-    $nextPage = min($page + 1, $totalPages);
     
 
     $urlQuery = "?";
     $query = 'SELECT * from studentdb ';
-
-    if ($search) {
-        echo "<p>Aradığınız kelimeyi : <strong>$search</strong></p>";
-        $query = $query . "WHERE fname LIKE '%" . $search . "%' OR lname LIKE '%" . $search . "%' OR birthPlace LIKE '%" . $search . "%' ";
-        $urlQuery = $urlQuery . "&search=$search";
+$search=isset($_GET['is']) && $_GET['is'] === 'ara';
+    if (isset($_GET['is']) && $_GET['is'] === 'ara') {
+        // , $_GET['surname'], $_GET['dogumYeri'], $_GET['dogumTarihi']
+        $query = $query . "WHERE fname LIKE '%" . $_GET['name'] . "%' AND lname LIKE '%" . $_GET['surname'] . "%' AND birthPlace LIKE '%" . $_GET['dogumYeri'] . "%' AND birthDate LIKE '%" . $_GET['dogumTarihi'] . "%'  ";
     }
-    if ($sort) {
+    if ($sort) {    
         $query = $query . 'ORDER BY ' . $sort . ' ' . $order . ' ';
         $urlQuery = $urlQuery . "&sort=$sort";
     }
+    $kayitKumesi = mysqli_query($conn, $query) or die(mysqli_error($conn));
+    $limit = 5;
+    $totalRecords = mysqli_num_rows($kayitKumesi);
+    $totalPages = ceil($totalRecords / $limit);
+
     if ($page) {
         $limit = 5;
         $offset = ($page - 1) * $limit;
         $query = $query . 'LIMIT ' . $limit . ' OFFSET ' . $offset . ' ';
-        // $urlQuery = $urlQuery . "&page=$page";
+        $urlQuery = $urlQuery . "&page=$page";
     }
     $query = $query . ";";
 
     $kayitKumesi = mysqli_query($conn, $query) or die(mysqli_error($conn));
 
+   # $page = max($page, $totalPages);
+    $prevPage = max($page - 1, 1);
+    $nextPage = min($page + 1, $totalPages);
+    echo "totalRecord: $totalRecords , totalPages: $totalPages , page: $page <br>";
+
+
+    $name = isset($_GET['name']) ? htmlspecialchars($_GET['name']) : '';
+    $surname = isset($_GET['surname']) ? htmlspecialchars($_GET['surname']) : '';
+    $dogumYeri = isset($_GET['dogumYeri']) ? htmlspecialchars($_GET['dogumYeri']) : '';
+    $dogumTarihi = isset($_GET['dogumTarihi']) ? htmlspecialchars($_GET['dogumTarihi']) : '';
+
+
     echo "<style>td {border:1px solid red}</style>
-    <form  method='GET'>
-        <input type='text' name='search'>
-        <button>Bul</button>
-        <button>Temizle</button>
-    </form>
+
     <table>
         <tr>
             <td><a href='?{$buildUrl(['sort'=> 'sid', 'order' => $order === 'ASC' ? 'DESC' : 'ASC'])}'>NO</a></td>
@@ -140,15 +152,42 @@ function listele($page, $sort, $order, $search)
             <td><a href='?{$buildUrl(['sort'=> 'lname', 'order' => $order === 'ASC' ? 'DESC' : 'ASC'])}'>SOYAD</a></td>
             <td><a href='?{$buildUrl(['sort'=> 'birthPlace', 'order' => $order === 'ASC' ? 'DESC' : 'ASC'])}'>DOĞUM YERİ</a></td>
             <td><a href='?{$buildUrl(['sort'=> 'birthDate', 'order' => $order === 'ASC' ? 'DESC' : 'ASC'])}'>DOĞUM TARİHİ</a></td>
-            <td><a href='?is=eklemeFormu'>Yeni öğrenci ekle</a></td>
         </tr>";
+
+        echo "<form style='margin-top:50px'  method='GET'>
+         <td><input type='hidden' name='is' value='ekle'></td>
+         <td><input type='text' name='name' required></td>
+         <td><input type='text' name='surname' required></td>
+         <td><input type='text' name='dogumYeri' required></td>
+         <td><input type='date' name='dogumTarihi' required></td>
+         <td><button type='submit' class='add-button'>Ekle</button></td>
+         <td><button type='reset' class='add-button'>reset</button></td>
+            </form>";
+
+            echo "<form style='margin-top:50px'  method='GET'>
+            <tr>
+                <td><input type='hidden' name='is' value='ara'></td>
+                <td><input type='text' name='name' value='$name'></td>
+                <td><input type='text' name='surname' value='$surname'></td>
+                <td><input type='text' name='dogumYeri' value='$dogumYeri'></td>
+                <td><input type='date' name='dogumTarihi' value='$dogumTarihi'></td>
+                <td><button type='submit' class='add-button'>Ara</button></td>
+                <td><button type='button' class='add-button' onclick='window.location.href=window.location.pathname'>Clear</button></td>
+            </tr></form>";
+    
+    
+    
+
+     
     while ($kayit = mysqli_fetch_assoc($kayitKumesi)) {
         echo "<tr>
+        
             <td>{$kayit['sid']}</td>
             <td>{$kayit['fname']}</td>
             <td>{$kayit['lname']}</td>
             <td>{$kayit['birthPlace']}</td>
             <td>{$kayit['birthDate']}</td>
+            
             <td><a href='?is=sil&page={$page}&sid={$kayit['sid']}'>Sil</a></td>
             <td><a href='?is=degistirmeFormu&sid={$kayit['sid']}'>Güncelle</a></td>
         </tr>\n";
@@ -157,15 +196,22 @@ function listele($page, $sort, $order, $search)
 
     echo '<div style="margin-left:200px; margin-top:20px; font-size:larger">';
     if ($page != 1) {
-        echo "<div><a href='?{$buildUrl(['page' => 1])}'>&lt;&lt;</a> ";
-        echo "<a href='?{$buildUrl(['page' => $prevPage])}'>&lt;</a>  ";
+        $x =  $_SERVER['QUERY_STRING']. "&". $buildUrl(['page' => 1]);
+        echo "<div><a href='?{$x}'>&lt;&lt;</a> ";
+
+        $x =  $_SERVER['QUERY_STRING'] . "&". $buildUrl(['page' =>  $prevPage]);
+        echo "<a href='?{$x}'>&lt;</a>  ";
     }
     for ($i = max(1, $page - 3); $i <= min($totalPages, $page + 3); $i++) {
-        echo "<a href='?{$buildUrl(['page' => $i])}'>$i</a> ";
+        $x =  $_SERVER['QUERY_STRING'] . "&". $buildUrl(['page' => $i]);
+        echo "<a href='?{$x}'>$i</a> ";
     }
     if ($page != $totalPages) {
-        echo "<a href='?{$buildUrl(['page' => $nextPage])}'>&gt;</a>  ";
-        echo "<a href='?{$buildUrl(['page' => $totalPages])}'>&gt;&gt;</a></div>";
+        $x =  $_SERVER['QUERY_STRING'] . "&". $buildUrl(['page' => $nextPage]);
+       echo "<a href='?{$x}'>&gt;</a>  ";
+
+       $x =  $_SERVER['QUERY_STRING'] . "&".$buildUrl(['page' => $totalPages]);
+       echo "<a href='?{$x}'>&gt;&gt;</a></div>";
     }
     echo '</div>';
     mysqli_close($conn) or die(mysqli_error($conn));
@@ -231,6 +277,24 @@ function guncelle($sid, $name, $surname, $dogumYeri, $dogumTarihi)
 
     $query = "UPDATE studentdb SET fname='$name', lname='$surname', birthPlace='$dogumYeri', birthDate='$dogumTarihi' WHERE sid='$sid'";
     $retval = mysqli_query($conn, $query) or die("Update operation failed");
+}
+function ara ($searchf,$searchl,$searchp,$searchd){
+
+    global $conn;
+    $conn = connect();
+
+    $searchf = mysqli_real_escape_string($conn, $searchf);
+    $searchl = mysqli_real_escape_string($conn, $searchl);
+    $searchp = mysqli_real_escape_string($conn, $searchp);
+    $searchd = mysqli_real_escape_string($conn, $searchd);
+
+    $query = "SELECT * FROM studentdb WHERE fname LIKE '%$searchf%' AND lname LIKE '%$searchl%' AND birthPlace LIKE '%$searchp%' AND birthDate LIKE '%$searchd%'";
+    $result = mysqli_query($conn, $query) or die("Search operation failed");
+
+    echo "<strong>first name={$searchf} and last name={$searchl} and birth place={$searchp} and birth date={$searchd}</strong>";
+    
+
+
 }
 
 ?>
