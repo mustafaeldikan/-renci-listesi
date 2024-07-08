@@ -16,7 +16,7 @@ switch (isset($_GET['is']) ? $_GET['is'] : '') {
         break;
     case 'ekle':
         echo pageHeader("Student List");
-        ekle($_POST['name'], $_POST['surname'], $_POST['dogumYeri'], $_POST['dogumTarihi']);
+        ekle($_GET['name'], $_GET['surname'], $_GET['dogumYeri'], $_GET['dogumTarihi']);
         listele($page, $sort, $order, $search);
         break;
     case 'degistirmeFormu':
@@ -25,7 +25,7 @@ switch (isset($_GET['is']) ? $_GET['is'] : '') {
         break;
     case 'guncelle':
         echo pageHeader("Student List");
-        guncelle($_POST['sid'], $_POST['name'], $_POST['surname'], $_POST['dogumYeri'], $_POST['dogumTarihi']);
+        guncelle($_GET['sid'], $_GET['name'], $_GET['surname'], $_GET['dogumYeri'], $_GET['dogumTarihi']);
         listele($page, $sort, $order, $search);
         break;
     default:
@@ -36,7 +36,8 @@ switch (isset($_GET['is']) ? $_GET['is'] : '') {
 function eklemeFormu()
 {
     echo '
-    <form style="margin-top:50px" id="addStudentForm" action="student.php?is=ekle" method="POST">
+    <form style="margin-top:50px"  method="GET">
+        <input type="hidden" name="is" value="ekle">
         <label for="isim">İsim:</label>
         <input type="text" name="name" required><br><br>
         <label for="soyisim">Soyisim:</label>
@@ -96,6 +97,13 @@ function listele($page, $sort, $order, $search)
 {
     $buildUrl = 'buildUrl';
     global $conn;
+    $limit = 5;
+    $totalRecords = mysqli_query($conn, "SELECT COUNT(*) AS total FROM studentdb");
+    $totalRecords = mysqli_fetch_assoc($totalRecords)['total'];
+    $totalPages = ceil($totalRecords / $limit);
+    $prevPage = max($page - 1, 1);
+    $nextPage = min($page + 1, $totalPages);
+    
 
     $urlQuery = "?";
     $query = 'SELECT * from studentdb ';
@@ -120,7 +128,7 @@ function listele($page, $sort, $order, $search)
     $kayitKumesi = mysqli_query($conn, $query) or die(mysqli_error($conn));
 
     echo "<style>td {border:1px solid red}</style>
-    <form method='GET'>
+    <form  method='GET'>
         <input type='text' name='search'>
         <button>Bul</button>
         <button>Temizle</button>
@@ -141,17 +149,11 @@ function listele($page, $sort, $order, $search)
             <td>{$kayit['lname']}</td>
             <td>{$kayit['birthPlace']}</td>
             <td>{$kayit['birthDate']}</td>
-            <td><a href='?is=sil&sid={$kayit['sid']}'>Sil</a></td>
+            <td><a href='?is=sil&page={$page}&sid={$kayit['sid']}'>Sil</a></td>
             <td><a href='?is=degistirmeFormu&sid={$kayit['sid']}'>Güncelle</a></td>
         </tr>\n";
     }
     echo "</table>";
-
-    $totalRecords = mysqli_query($conn, "SELECT COUNT(*) AS total FROM studentdb");
-    $totalRecords = mysqli_fetch_assoc($totalRecords)['total'];
-    $totalPages = ceil($totalRecords / $limit);
-    $prevPage = max($page - 1, 1);
-    $nextPage = min($page + 1, $totalPages);
 
     echo '<div style="margin-left:200px; margin-top:20px; font-size:larger">';
     if ($page != 1) {
@@ -173,8 +175,10 @@ function sil($sid)
 {
     global $conn;
     $conn = connect();
+   
     $query = "DELETE FROM studentdb WHERE sid='$sid'";
     $retval = mysqli_query($conn, $query) or die("Delete operation failed");
+
 }
 
 function ekle($name, $surname, $dogumYeri, $dogumTarihi)
@@ -200,7 +204,8 @@ function form($sid)
     $student = mysqli_fetch_assoc($result);
 
     echo '
-    <form action="student.php?is=guncelle" method="POST">
+    <form  method="GET">
+        <input type="hidden" name="is" value="guncelle">
         <input hidden name="sid" value="' . $sid . '">
         <label for="isim">İsim:</label>
         <input type="text" name="name" value="' . $student['fname'] . '" required><br><br>
@@ -227,7 +232,5 @@ function guncelle($sid, $name, $surname, $dogumYeri, $dogumTarihi)
     $query = "UPDATE studentdb SET fname='$name', lname='$surname', birthPlace='$dogumYeri', birthDate='$dogumTarihi' WHERE sid='$sid'";
     $retval = mysqli_query($conn, $query) or die("Update operation failed");
 }
-
-
 
 ?>
